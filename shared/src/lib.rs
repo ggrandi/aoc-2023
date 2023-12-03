@@ -1,14 +1,10 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+pub fn char_to_usize(c: char) -> usize {
+    ((c as u8) - b'0') as usize
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[macro_export]
+macro_rules! dprintln {
+    ($($arg:tt)*) => {
+    #[cfg(debug_assertions)]
+    { println!($($arg)*);}};
 }

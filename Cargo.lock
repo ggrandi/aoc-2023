@@ -23,11 +23,19 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "regex",
+ "shared",
 ]
 
 [[package]]
 name = "day02"
 version = "0.1.0"
+
+[[package]]
+name = "day03"
+version = "0.1.0"
+dependencies = [
+ "shared",
+]
 
 [[package]]
 name = "memchr"

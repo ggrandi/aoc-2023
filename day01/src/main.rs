@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Ok, Result};
 
 use regex::Regex;
+use shared::char_to_usize;
 
 const INPUT: &str = include_str!("../input");
 // const INPUT: &str = "two1nine
@@ -95,8 +96,4 @@ fn str_to_usize(s: &str) -> usize {
         "zero" => 0,
         s => s.parse().unwrap(),
     }
-}
-
-fn char_to_usize(c: char) -> usize {
-    ((c as u8) - b'0') as usize
 }
