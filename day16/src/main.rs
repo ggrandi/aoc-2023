@@ -1,6 +1,7 @@
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
 use anyhow::{anyhow, bail, Error, Result};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use shared::dprintln;
 
 const INPUT: &str = include_str!("../input");
@@ -12,11 +13,8 @@ fn main() -> Result<()> {
 
     println!("part1: {part1}");
 
-    let mut max = part1;
-
-    for (starting_position, starting_dir) in mirrors
+    let max = mirrors
         .get_column(0)
-        .skip(1)
         .map(|(i, _)| ((i, usize::MAX), Dir::Right))
         .chain(
             mirrors
@@ -33,13 +31,12 @@ fn main() -> Result<()> {
                 .get_row(mirrors.col_height - 1)
                 .map(|(j, _)| ((mirrors.col_height, j), Dir::Up)),
         )
-    {
-        let energized = mirrors.count_energized(starting_position, starting_dir);
-
-        if energized > max {
-            max = energized;
-        }
-    }
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|(starting_position, starting_dir)| {
+            mirrors.count_energized(starting_position, starting_dir)
+        })
+        .reduce(|| usize::MIN, usize::max);
 
     println!("part2: {max}");
 
@@ -81,7 +78,7 @@ impl Mirrors {
     }
 
     fn get_row(&self, i: usize) -> impl DoubleEndedIterator<Item = (usize, Mirror)> + '_ {
-        (0..self.col_height).map(move |j| (j, self.mirrors[i * self.row_len + j]))
+        (0..self.row_len).map(move |j| (j, self.mirrors[i * self.row_len + j]))
     }
 
     fn count_energized(&self, starting_position: (usize, usize), starting_dir: Dir) -> usize {

@@ -82,7 +82,7 @@ impl Grid {
     }
 
     fn get_row(&self, i: usize) -> impl DoubleEndedIterator<Item = (usize, Rock)> + '_ {
-        (0..self.col_height).map(move |j| (j, self.rocks[i * self.row_len + j]))
+        (0..self.row_len).map(move |j| (j, self.rocks[i * self.row_len + j]))
     }
 
     fn cycle(&mut self) {
