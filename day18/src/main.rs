@@ -1,23 +1,87 @@
-use core::num;
 use std::collections::BinaryHeap;
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use shared::dprintln;
 
-use crate::map::Pipes;
+const INPUT: &str = include_str!("../input");
 
-pub fn part2(map: &crate::map::Map) -> Result<()> {
+fn main() -> Result<()> {
+    let part1 = handle_input(|l| {
+        let mut c = l.split_whitespace();
+
+        (
+            c.next().unwrap().chars().next().unwrap(),
+            c.next().unwrap().parse::<i64>().unwrap(),
+        )
+    })?;
+
+    println!("part1: {part1}");
+
+    let part2 = handle_input(|l| {
+        let mut n = l.split_whitespace().rev();
+
+        let i = n.next().unwrap();
+        let i = &i[2..i.len() - 1].split_at(5);
+
+        let d = match i.1 {
+            "0" => 'R',
+            "1" => 'D',
+            "2" => 'L',
+            "3" => 'U',
+            _ => unreachable!(),
+        };
+
+        (d, i64::from_str_radix(i.0, 16).unwrap())
+    })?;
+
+    println!("part2: {part2}");
+
+    Ok(())
+}
+
+fn handle_input(get_dir_length: impl Fn(&str) -> (char, i64)) -> Result<usize> {
     let mut horizontal_lines = BinaryHeap::new();
     let mut lines = vec![];
 
-    dprintln!("{:?}", map.fence_points().collect::<Vec<_>>());
+    let mut points = INPUT
+        .lines()
+        .map(get_dir_length)
+        .scan((0, 0), |curr, (d, l)| {
+            match d {
+                'R' => curr.1 += l,
+                'L' => curr.1 -= l,
+                'U' => curr.0 -= l,
+                'D' => curr.0 += l,
+                _ => panic!(),
+            }
 
-    let mut points = map.fence_points();
+            Some((*curr, l))
+        })
+        .chain([((0, 0), 0)]);
+
+    let mut sum = 0;
 
     let first = points.next().unwrap();
-    let mut prev = first;
+    let mut prev = first.0;
 
-    for next in points.chain([first]) {
+    let mut min = (0, 0);
+    let mut max = (0, 0);
+
+    for (next, l) in points.chain([first]) {
+        sum += l;
+        if min.0 > next.0 {
+            min.0 = next.0;
+        }
+        if min.1 > next.1 {
+            min.1 = next.1;
+        }
+        if max.0 < next.0 {
+            max.0 = next.0;
+        }
+        if max.1 < next.1 {
+            max.1 = next.1;
+        }
+
         dprintln!("p|{prev:?}|{next:?}");
         if prev.0 == next.0 {
             // if not already in the heap
@@ -33,6 +97,23 @@ pub fn part2(map: &crate::map::Map) -> Result<()> {
         prev = next;
     }
 
+    // println!("{min:?} {max:?}");
+    // for i in min.0..=max.0 {
+    //     for j in min.1..=max.1 {
+    //         if lines.iter().any(|l| l.contains_i(i) && l.contains_j(j)) {
+    //             print!("#")
+    //         } else {
+    //             print!(".")
+    //         }
+    //     }
+    //
+    //     println!()
+    // }
+
+    let mut sum = sum as usize;
+
+    println!("sum: {sum}");
+
     lines.sort_unstable_by_key(|l| match l {
         Line::Horizontal { i: _, j1, j2: _ } => *j1,
         Line::Vertical { i1: _, i2: _, j } => *j,
@@ -45,8 +126,6 @@ pub fn part2(map: &crate::map::Map) -> Result<()> {
 
     let horizontal_lines = horizontal_lines.into_sorted_vec();
     dprintln!("{horizontal_lines:?}");
-
-    let mut sum = 0;
 
     for w in horizontal_lines.windows(2) {
         let prev_line = w[0];
@@ -81,9 +160,9 @@ pub fn part2(map: &crate::map::Map) -> Result<()> {
                 .count();
 
             // gets all the possible positions
-            let num = (line - prev_line - 1) * to_check;
+            let num = (line - prev_line - 1) as usize * to_check;
 
-            dprintln!("{prev_line}-{line}: {num}");
+            dprintln!("{prev_line}-{line}: {to_check} * {}", line - prev_line - 1);
 
             sum += num;
         }
@@ -119,7 +198,6 @@ pub fn part2(map: &crate::map::Map) -> Result<()> {
                 }
             })
             .flatten()
-            .filter_map(|j| map.get(line, j))
             .count();
 
         dprintln!("{line}: {num}");
@@ -127,19 +205,17 @@ pub fn part2(map: &crate::map::Map) -> Result<()> {
         sum += num;
     }
 
-    println!("part2: {sum}");
-
-    Ok(())
+    Ok(sum)
 }
 
 #[derive(Debug, Clone, Copy)]
 enum Line {
-    Horizontal { i: usize, j1: usize, j2: usize },
-    Vertical { i1: usize, i2: usize, j: usize },
+    Horizontal { i: i64, j1: i64, j2: i64 },
+    Vertical { i1: i64, i2: i64, j: i64 },
 }
 
 impl Line {
-    pub fn from_points(p1: (usize, usize), p2: (usize, usize)) -> Option<Self> {
+    pub fn from_points(p1: (i64, i64), p2: (i64, i64)) -> Option<Self> {
         if p1.0 == p2.0 {
             let j2 = p1.1.max(p2.1);
             let j1 = p1.1.min(p2.1);
@@ -153,6 +229,7 @@ impl Line {
                 })
             }
         } else {
+            assert_eq!(p1.1, p2.1);
             Some(Line::Vertical {
                 j: p1.1,
                 i1: p1.0.min(p2.0),
@@ -161,10 +238,17 @@ impl Line {
         }
     }
 
-    pub fn contains_i(&self, i_val: usize) -> bool {
+    pub fn contains_i(&self, i_val: i64) -> bool {
         match self {
             Line::Horizontal { i, j1: _, j2: _ } => *i == i_val,
             Line::Vertical { i1, i2, j: _ } => (*i1..=*i2).contains(&i_val),
+        }
+    }
+
+    pub fn contains_j(&self, j_val: i64) -> bool {
+        match self {
+            Line::Horizontal { i: _, j1, j2 } => (*j1..=*j2).contains(&j_val),
+            Line::Vertical { i1: _, i2: _, j } => j_val == *j,
         }
     }
 }
